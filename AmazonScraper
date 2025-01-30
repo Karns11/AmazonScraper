@@ -180,49 +180,77 @@ for _ in range(5):
 
 
 last_os = None
+page_data = []
+rank_data =[]
+item_data =[]
+
 for page in pages:
 
-    #url_nocategory = "https://www.amazon.com/Best-Sellers/zgbs"
-    url = f"https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry/zgbs/fashion/ref=zg_bs_pg_{page}_fashion?_encoding=UTF8&pg={page}"
-    #url = f"https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry-Mens-Fashion/zgbs/fashion/7147441011/ref=zg_bs_pg_{page}_fashion?_encoding=UTF8&pg={page}"
-
-    match = re.search(r"amazon\.com/([^/]+)", url)
-
-    if match:
-        extracted_text = match.group(1)
-
-    print(f"\nStarting loop for page: {extracted_text}, Page Number: {page} \n")
-
-    random_sleep = random.uniform(3, 6)  # Random float between 1 and 5
-    time.sleep(random_sleep)
-
-    headers = generate_headers()
-
-    print(f"headers = {headers} \n")
-
-    # Send the HTTP request
-    response = requests.get(url, headers=headers)
-
-    random_sleep = random.uniform(3, 6)  # Random float between 1 and 5
-    time.sleep(random_sleep)
+    while True:
     
-    # Check for successful request
-    if response.status_code == 200:
-        # Parse the HTML content
-        soup = BeautifulSoup(response.content, "html.parser")
+        #url_nocategory = "https://www.amazon.com/Best-Sellers/zgbs"
+        url = f"https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry/zgbs/fashion/ref=zg_bs_pg_{page}_fashion?_encoding=UTF8&pg={page}"
+        #url = f"https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry-Mens-Fashion/zgbs/fashion/7147441011/ref=zg_bs_pg_{page}_fashion?_encoding=UTF8&pg={page}"
+    
+        match = re.search(r"amazon\.com/([^/]+)", url)
+    
+        if match:
+            extracted_text = match.group(1)
+    
+        print(f"\nStarting loop for page: {extracted_text}, Page Number: {page} \n")
+    
+        random_sleep = random.uniform(3, 6)  # Random float between 1 and 5
+        time.sleep(random_sleep)
+    
+        headers = generate_headers()
+    
+        print(f"headers = {headers} \n")
+    
+        # Send the HTTP request
+        response = requests.get(url, headers=headers)
+    
+        random_sleep = random.uniform(4, 8)  
+        time.sleep(random_sleep)
         
-        # Find the product titles
-        #product_titles_url_with_no_category = soup.select('div[class*="p13n-sc-truncate-desktop-type2"]')
-        product_titles = soup.select('div[class*="_cDEzb_p13n-sc-css-line-clamp-3_g3dy"]')
+        # Check for successful request
+        if response.status_code == 200:
+            # Parse the HTML content
+            soup = BeautifulSoup(response.content, "html.parser")
+            
+            # Find the product titles
+            #product_titles_url_with_no_category = soup.select('div[class*="p13n-sc-truncate-desktop-type2"]')
+            product_titles = soup.select('div[class*="_cDEzb_p13n-sc-css-line-clamp-3_g3dy"]')
+    
+            if len(product_titles) == 0:
+                print("\n no products with 200 status")
+                continue
+            
+            # Print the titles
+            for i, title in enumerate(product_titles, start=1):  # Limit to the top 10 items
+                print(f"Page {page} | {i}. {title.get_text(strip=True)}")
+                item = title.get_text(strip=True)
+                page_data.append(page)
+                rank_data.append(i)
+                item_data.append(item)
+                break
+        else:
+            print(f"Failed to retrieve data. Error on page: {page} HTTP Status Code: {response.status_code} \n")
+            if response.status_code == 400:
+                print("Error because no more pages")
+                break
+            if response.status_code == 429:
+                print("Error: rate limited. Trying again...")
+                random_sleep = random.uniform(3, 6)  # Random float between 1 and 5
+                time.sleep(random_sleep)
+                headers = generate_headers()
+                continue
+            break
 
-        if len(product_titles) == 0:
-            print("\n no products with 200 status")
-        
-        # Print the titles
-        for i, title in enumerate(product_titles[:40], start=1):  # Limit to the top 10 items
-            print(f"Page {page} | {i}. {title.get_text(strip=True)}")
-    else:
-        print(f"Failed to retrieve data. Error on page: {page} HTTP Status Code: {response.status_code} \n")
-        if response.status_code == 400:
-            print("Error because no more pages")
-        break
+
+item_data_dict = {
+    "page": page_data,
+    "rank": rank_data,
+    "item": item_data
+}
+
+item_data_df = pd.DataFrame(item_data_dict)
