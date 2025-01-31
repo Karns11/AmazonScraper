@@ -178,79 +178,163 @@ for _ in range(5):
 
 #headers
 
-
 last_os = None
 page_data = []
-rank_data =[]
-item_data =[]
+rank_data = []
+item_data = []
+product_reviews_data = []
+ratings_data = []
+price_data = []
 
-for page in pages:
 
-    while True:
-    
-        #url_nocategory = "https://www.amazon.com/Best-Sellers/zgbs"
-        url = f"https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry/zgbs/fashion/ref=zg_bs_pg_{page}_fashion?_encoding=UTF8&pg={page}"
-        #url = f"https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry-Mens-Fashion/zgbs/fashion/7147441011/ref=zg_bs_pg_{page}_fashion?_encoding=UTF8&pg={page}"
-    
-        match = re.search(r"amazon\.com/([^/]+)", url)
-    
-        if match:
-            extracted_text = match.group(1)
-    
-        print(f"\nStarting loop for page: {extracted_text}, Page Number: {page} \n")
-    
-        random_sleep = random.uniform(3, 6)  # Random float between 1 and 5
-        time.sleep(random_sleep)
-    
-        headers = generate_headers()
-    
-        print(f"headers = {headers} \n")
-    
-        # Send the HTTP request
-        response = requests.get(url, headers=headers)
-    
-        random_sleep = random.uniform(4, 8)  
-        time.sleep(random_sleep)
+page = 1   
+while True:
+    #url_nocategory = "https://www.amazon.com/Best-Sellers/zgbs"
+    url = f"https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry/zgbs/fashion/ref=zg_bs_pg_{page}_fashion?_encoding=UTF8&pg={page}"
+    #url = f"https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry-Mens-Fashion/zgbs/fashion/7147441011/ref=zg_bs_pg_{page}_fashion?_encoding=UTF8&pg={page}"
         
-        # Check for successful request
-        if response.status_code == 200:
-            # Parse the HTML content
-            soup = BeautifulSoup(response.content, "html.parser")
+    match = re.search(r"amazon\.com/([^/]+)", url)
+        
+    if match:
+        extracted_text = match.group(1)
+        
+    print(f"\nStarting loop for page: {extracted_text}, Page Number: {page} \n")
+        
+    random_sleep = random.uniform(3, 6)  # Random float between 1 and 5
+    time.sleep(random_sleep)
+        
+    headers = generate_headers()
+        
+    print(f"headers = {headers} \n")
+        
+    # Send the HTTP request
+    response = requests.get(url, headers=headers)
+        
+    random_sleep = random.uniform(4, 8)  
+    time.sleep(random_sleep)
             
-            # Find the product titles
-            #product_titles_url_with_no_category = soup.select('div[class*="p13n-sc-truncate-desktop-type2"]')
-            product_titles = soup.select('div[class*="_cDEzb_p13n-sc-css-line-clamp-3_g3dy"]')
+    # Check for successful request
+    # if response.status_code == 200:
+    #     # Parse the HTML content
+    #     soup = BeautifulSoup(response.content, "html.parser")
+                
+    #     # Find the product titles
+    #     #product_titles_url_with_no_category = soup.select('div[class*="p13n-sc-truncate-desktop-type2"]')
+    #     product_titles = soup.select('div[class*="sc-css-line-clamp"]')
+        
+    #     if len(product_titles) == 0:
+    #         print("\n no products with 200 status, trying page again...")
+    #         continue
+                
+    #     # Print the titles
+    #     for i, title in enumerate(product_titles, start=1):
+    #         print(f"Page {page} | {i}. {title.get_text(strip=True)}")
+    #         item = title.get_text(strip=True)
+    #         page_data.append(page)
+    #         rank_data.append(i)
+    #         item_data.append(item)
+    #         if i == len(product_titles):  
+    #             page += 1
+    #             continue 
+
+    # if response.status_code == 200:
+    #     soup = BeautifulSoup(response.content, "html.parser")
+        
+    #     # Extract product titles and reviews
+    #     product_titles = soup.select('div[class*="sc-css-line-clamp"]')
+    #     product_reviews = soup.select('span[class*="a-icon-alt"]')
+        
+    #     if len(product_titles) == 0:
+    #         print("\n No products found with 200 status, trying page again...")
+    #         continue
+        
+    #     # Ensure reviews list is the same length as product titles
+    #     if len(product_reviews) < len(product_titles):
+    #         product_reviews.extend(["No Reviews"] * (len(product_titles) - len(product_reviews)))
+        
+    #     # Print and store the data
+    #     for i, (title, review) in enumerate(zip(product_titles, product_reviews), start=1):
+    #         item = title.get_text(strip=True)
+    #         review_text = review.get_text(strip=True) if review else "No Reviews"
+            
+    #         print(f"Page {page} | {i}. {item} | Reviews: {review_text}")
+            
+    #         page_data.append(page)
+    #         rank_data.append(i)
+    #         item_data.append(item)
+    #         product_reviews_data.append(review_text)  # Store reviews
+            
+    #         if i == len(product_titles):
+    #             page += 1
+    #             continue
+
+
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, "html.parser")
+        
+        # Extract product data
+        product_titles = soup.select('div[class*="sc-css-line-clamp"]')
+        product_reviews = soup.select('span[class*="a-icon-alt"]')
+        product_num_ratings = soup.select('span[class*="a-size-small"]')
+        product_prices = soup.select('span[class*="price"]')
+
+        if len(product_titles) == 0:
+            print("\n No products found with 200 status, trying page again...")
+            continue
+        
+        # Ensure lists have matching lengths by filling missing values
+        def fill_list(lst, length, fill_value="N/A"):
+            if len(lst) < length:
+                lst.extend([fill_value] * (length - len(lst)))
+            return lst[:length]
+
+        num_products = len(product_titles)
+        product_reviews = fill_list(product_reviews, num_products, "No Reviews")
+        product_num_ratings = fill_list(product_num_ratings, num_products, "0 Ratings")
+        product_prices = fill_list(product_prices, num_products, "No Price")
+
+        # Print and store the data
+        for i, (title, review, num_ratings, price) in enumerate(zip(product_titles, product_reviews, product_num_ratings, product_prices), start=1):
+            item = title.get_text(strip=True)
+            review_text = review.get_text(strip=True) if review else "No Reviews"
+            num_ratings_text = num_ratings.get_text(strip=True) if num_ratings else "0 Ratings"
+            price_text = price.get_text(strip=True) if price else "No Price"
+            
+            print(f"Page {page} | {i}. {item} | Reviews: {review_text} | Ratings: {num_ratings_text} | Price: {price_text}")
+            
+            page_data.append(page)
+            rank_data.append(i)
+            item_data.append(item)
+            product_reviews_data.append(review_text)
+            ratings_data.append(num_ratings_text)
+            price_data.append(price_text)
+            
+            if i == len(product_titles):
+                page += 1
+                continue
+
     
-            if len(product_titles) == 0:
-                print("\n no products with 200 status")
-                continue
-            
-            # Print the titles
-            for i, title in enumerate(product_titles, start=1):  # Limit to the top 10 items
-                print(f"Page {page} | {i}. {title.get_text(strip=True)}")
-                item = title.get_text(strip=True)
-                page_data.append(page)
-                rank_data.append(i)
-                item_data.append(item)
-                break
-        else:
-            print(f"Failed to retrieve data. Error on page: {page} HTTP Status Code: {response.status_code} \n")
-            if response.status_code == 400:
-                print("Error because no more pages")
-                break
-            if response.status_code == 429:
-                print("Error: rate limited. Trying again...")
-                random_sleep = random.uniform(3, 6)  # Random float between 1 and 5
-                time.sleep(random_sleep)
-                headers = generate_headers()
-                continue
+    else:
+        print(f"Failed to retrieve data. Error on page: {page} HTTP Status Code: {response.status_code} \n")
+        if response.status_code == 400:
+            print("Error because no more pages, ending...")
             break
+        if response.status_code == 429:
+            print("Error because rate limited. Trying again...")
+            random_sleep = random.uniform(3, 6)  # Random float between 1 and 5
+            time.sleep(random_sleep)
+            headers = generate_headers()
+            continue
+        break
 
 
 item_data_dict = {
     "page": page_data,
     "rank": rank_data,
-    "item": item_data
+    "item": item_data,
+    "Reviews": product_reviews_data,
+    "NumRatings": ratings_data,
+    "Price": price_data
 }
 
 item_data_df = pd.DataFrame(item_data_dict)
