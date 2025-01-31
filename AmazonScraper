@@ -338,3 +338,120 @@ item_data_dict = {
 }
 
 item_data_df = pd.DataFrame(item_data_dict)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Brand new way to incorporate more urls
+base_urls = [
+    "https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry-Uniforms-Work-Safety",
+    "https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry-Sport-Specific-Clothing",
+    "https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry-Girls-Fashion",
+    "https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry/zgbs/fashion",
+    "https://www.amazon.com/Best-Sellers-Clothing-Shoes-Jewelry-Mens-Fashion/zgbs/fashion/7147441011"
+]
+
+last_os = None
+page_data = []
+rank_data = []
+item_data = []
+product_reviews_data = []
+ratings_data = []
+price_data = []
+base_url_data = []
+
+# Loop through each base URL
+for base_url in base_urls:
+    page = 1  # Reset page count for each URL
+    
+    while True:
+        # Construct URL with current page number
+        url = f"{base_url}/ref=zg_bs_pg_{page}_fashion?_encoding=UTF8&pg={page}"
+
+        match = re.search(r"amazon\.com/([^/]+)", url)
+        extracted_text = match.group(1) if match else "Unknown"
+
+        print(f"\nStarting loop for category: {extracted_text}, Page Number: {page} \n")
+
+        random_sleep = random.uniform(3, 6)
+        time.sleep(random_sleep)
+
+        headers = generate_headers()
+        print(f"headers = {headers} \n")
+
+        response = requests.get(url, headers=headers)
+        random_sleep = random.uniform(4, 8)
+        time.sleep(random_sleep)
+
+        if response.status_code != 200:
+            print(f"Failed to retrieve data. HTTP Status Code: {response.status_code} on page {page} \n")
+            if response.status_code == 400:
+                print("No more pages. Moving to next category...\n")
+                break
+            if response.status_code == 429:
+                print("Rate limited. Retrying...")
+                time.sleep(random.uniform(3, 6))
+                continue
+            break
+
+        soup = BeautifulSoup(response.content, "html.parser")
+
+        product_titles = soup.select('div[class*="sc-css-line-clamp"]')
+        product_reviews = soup.select('span[class*="a-icon-alt"]')
+        product_num_ratings = soup.select('span[class*="a-size-small"]')
+        product_prices = soup.select('span[class*="price"]')
+
+        if not product_titles:
+            print("\n No products found, trying again...")
+            continue
+
+        def fill_list(lst, length, fill_value="N/A"):
+            return lst + [fill_value] * (length - len(lst)) if len(lst) < length else lst[:length]
+
+        num_products = len(product_titles)
+        product_reviews = fill_list(product_reviews, num_products, "No Reviews")
+        product_num_ratings = fill_list(product_num_ratings, num_products, "0 Ratings")
+        product_prices = fill_list(product_prices, num_products, "No Price")
+
+        for i, (title, review, num_ratings, price) in enumerate(zip(product_titles, product_reviews, product_num_ratings, product_prices), start=1):
+            item = title.get_text(strip=True)
+            review_text = review.get_text(strip=True) if review else "No Reviews"
+            num_ratings_text = num_ratings.get_text(strip=True) if num_ratings else "0 Ratings"
+            price_text = price.get_text(strip=True) if price else "No Price"
+
+            print(f"Page {page} | {i}. {item} | Reviews: {review_text} | Ratings: {num_ratings_text} | Price: {price_text}")
+
+            page_data.append(page)
+            rank_data.append(i)
+            item_data.append(item)
+            product_reviews_data.append(review_text)
+            ratings_data.append(num_ratings_text)
+            price_data.append(price_text)
+            base_url_data.append(extracted_text)
+
+        page += 1  # Move to the next page
+
+# Create DataFrame
+item_data_dict = {
+    "page": page_data,
+    "rank": rank_data,
+    "item": item_data,
+    "Reviews": product_reviews_data,
+    "NumRatings": ratings_data,
+    "Price": price_data,
+    "url": base_url_data
+}
+
+item_data_df = pd.DataFrame(item_data_dict)
